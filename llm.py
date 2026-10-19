@@ -13,6 +13,7 @@ import config
 
 
 def providers():
+    """(name, url, model, key). Keyed free tiers first, keyless Pollinations models last."""
     p = []
     if os.environ.get("GEMINI_API_KEY"):
         p.append((
@@ -28,12 +29,23 @@ def providers():
             os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile"),
             os.environ["GROQ_API_KEY"],
         ))
-    p.append(("pollinations", "https://text.pollinations.ai/openai", "openai", None))
+    for m in ("openai", "mistral", "llama"):
+        p.append((f"pollinations/{m}", "https://text.pollinations.ai/openai", m, None))
     return p
 
 
 def provider_name():
-    return "demo" if config.DEMO else providers()[0][0]
+    return "demo" if config.DEMO else providers()[0][0].split("/")[0]
+
+
+def _content(resp_json):
+    """Pull the text out of an OpenAI-style reply, tolerating odd shapes."""
+    choice = (resp_json.get("choices") or [{}])[0]
+    msg = choice.get("message") or {}
+    text = msg.get("content") or msg.get("reasoning_content") or choice.get("text") or ""
+    if isinstance(text, list):  # content parts
+        text = "".join(part.get("text", "") for part in text if isinstance(part, dict))
+    return text
 
 
 def chat(messages, temperature=0.8):
@@ -50,14 +62,20 @@ def chat(messages, temperature=0.8):
                     json={"model": model, "messages": messages, "temperature": temperature},
                     timeout=120,
                 )
-                r.raise_for_status()
-                text = r.json()["choices"][0]["message"]["content"]
-                if text and text.strip():
+                if r.status_code != 200:
+                    errors.append(f"{name}: HTTP {r.status_code} {r.text[:120]}")
+                    time.sleep(2)
+                    continue
+                try:
+                    text = _content(r.json())
+                except ValueError:
+                    text = r.text  # some endpoints answer with plain text
+                if text and text.strip() and "SCENE" in text.upper():
                     return text
-                errors.append(f"{name}: empty reply")
+                errors.append(f"{name}: жауап бос немесе форматы басқа ({r.text[:120]!r})")
             except Exception as e:  # noqa: BLE001
                 errors.append(f"{name}: {e}")
-                time.sleep(3)
+            time.sleep(2)
     raise RuntimeError("LLM қолжетімсіз: " + " | ".join(errors[-3:]))
 
 
