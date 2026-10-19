@@ -88,9 +88,7 @@ def make_package(topic, script, kind, lang, style_key):
         return _demo_package(topic, kind, lang, n)
 
     lang_name = config.LANG_NAMES[lang]
-    system = (
-        "You are a YouTube scriptwriter. Reply with ONE valid JSON object and nothing else."
-    )
+    system = "You are a YouTube scriptwriter. Follow the requested plain-text format exactly. No markdown, no code fences."
     if script and script.strip():
         source = (
             "Use the narration below VERBATIM (you may only split it into scenes). "
@@ -105,37 +103,55 @@ def make_package(topic, script, kind, lang, style_key):
         )
     user = f"""Topic: {topic}
 Video type: {"vertical YouTube Short (under 60 seconds)" if kind == "short" else "long horizontal YouTube video (about 5 minutes)"}
-Narration language: {lang_name}. Title and description language: {lang_name}.
+Narration, title and description language: {lang_name}.
 {source}
 
-JSON schema:
-{{
-  "title": "catchy title, max 90 characters",
-  "description": "2-4 sentences + 3 hashtags",
-  "tags": ["8-12 short tags"],
-  "scenes": [
-    {{"narration": "text spoken in this scene, in {lang_name}, plain sentences without emojis or markdown",
-      "image_prompt": "ENGLISH visual description of the picture for this scene, concrete subject and setting, no text in the image"}}
-  ]
-}}"""
+Reply in EXACTLY this plain-text format (keep the English keywords as written):
+
+TITLE: catchy title, max 90 characters
+DESCRIPTION: 2-4 sentences ending with 3 hashtags
+TAGS: 8-12 short tags separated by commas
+
+SCENE
+NARRATION: text spoken in this scene, in {lang_name}, plain sentences, no emojis, no markdown
+IMAGE: ENGLISH description of the picture for this scene, concrete subject and setting, no text in the image
+
+SCENE
+NARRATION: ...
+IMAGE: ...
+
+(repeat SCENE blocks for every scene)"""
     last_err = None
     for _ in range(3):
         try:
             raw = chat([{"role": "system", "content": system}, {"role": "user", "content": user}])
-            data = _extract_json(raw)
-            scenes = [
-                {"narration": str(s["narration"]).strip(), "image_prompt": str(s.get("image_prompt") or topic).strip()}
-                for s in data["scenes"]
-                if str(s.get("narration", "")).strip()
-            ]
-            if not scenes:
-                raise ValueError("сахналар бос")
-            return {
-                "title": str(data.get("title") or topic)[:95],
-                "description": str(data.get("description") or ""),
-                "tags": [str(t).lstrip("#")[:30] for t in (data.get("tags") or [])][:15],
-                "scenes": scenes,
-            }
+            return _parse_package(raw, topic)
         except Exception as e:  # noqa: BLE001
             last_err = e
     raise RuntimeError(f"Сценарий жасалмады: {last_err}")
+
+
+def _field(block, key):
+    m = re.search(rf"^\s*\**{key}\**\s*:\s*(.+?)(?=^\s*\**(?:TITLE|DESCRIPTION|TAGS|NARRATION|IMAGE|SCENE)\**\s*:?\s*$|^\s*\**(?:TITLE|DESCRIPTION|TAGS|NARRATION|IMAGE)\**\s*:|\Z)",
+                  block, flags=re.S | re.M | re.I)
+    return re.sub(r"\s+", " ", m.group(1)).strip().strip("*").strip() if m else ""
+
+
+def _parse_package(raw, topic):
+    raw = re.sub(r"```\w*", "", raw).replace("\r", "")
+    parts = re.split(r"^\s*\**SCENE\b[^\n]*$", raw, flags=re.M | re.I)
+    head, blocks = parts[0], parts[1:]
+    scenes = []
+    for b in blocks:
+        narr = _field(b, "NARRATION")
+        if narr:
+            scenes.append({"narration": narr, "image_prompt": _field(b, "IMAGE") or topic})
+    if not scenes:
+        raise ValueError("сахналар табылмады")
+    tags = [t.strip().lstrip("#")[:30] for t in re.split(r"[,;]", _field(head, "TAGS")) if t.strip()][:15]
+    return {
+        "title": (_field(head, "TITLE") or topic)[:95],
+        "description": _field(head, "DESCRIPTION"),
+        "tags": tags,
+        "scenes": scenes,
+    }
