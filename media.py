@@ -16,6 +16,7 @@ import config
 
 FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 FPS = 25
+ZOOM_SCALE = 1.5  # input upscale for the Ken Burns zoom; 2.0 used too much RAM on 512 MB hosts
 
 
 def run_ffmpeg(args):
@@ -170,23 +171,24 @@ def make_clip(bg, audio, chunks, w, h, kind, idx, workdir, out):
         timeline.append((p, t, end))
         t = end
 
+    ew, eh = int(w * ZOOM_SCALE) // 2 * 2, int(h * ZOOM_SCALE) // 2 * 2
     inc = 0.12 / frames
     if idx % 2 == 0:
         z = f"min(zoom+{inc:.6f},1.12)"
     else:
         z = f"if(eq(on,0),1.12,max(zoom-{inc:.6f},1.0))"
-    args = ["-i", bg]
+    args = ["-threads", "2", "-filter_complex_threads", "1", "-i", bg]
     for p, _, _ in timeline:
-        args += ["-loop", "1", "-framerate", str(FPS), "-t", f"{dur:.2f}", "-i", p]
+        args += ["-i", p]  # single frame; overlay repeats it (looping inputs buffered hundreds of frames)
     args += ["-i", audio]
-    fc = (f"[0:v]scale={w * 2}:{h * 2}:force_original_aspect_ratio=increase,crop={w * 2}:{h * 2},"
+    fc = (f"[0:v]scale={ew}:{eh}:force_original_aspect_ratio=increase,crop={ew}:{eh},"
           f"zoompan=z='{z}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={w}x{h}:fps={FPS}[v0]")
     for i, (_, a, b) in enumerate(timeline):
         fc += f";[v{i}][{i + 1}:v]overlay=0:0:enable='between(t,{a:.2f},{b:.2f})'[v{i + 1}]"
     fc += f";[{len(timeline) + 1}:a]apad=pad_dur=0.4,aresample=44100,aformat=channel_layouts=stereo[a]"
     run_ffmpeg(args + ["-filter_complex", fc, "-map", f"[v{len(timeline)}]", "-map", "[a]",
                        "-t", f"{dur:.2f}", "-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
-                       "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-r", str(FPS), out])
+                       "-x264-params", "rc-lookahead=10:threads=2", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-r", str(FPS), out])
     return dur
 
 

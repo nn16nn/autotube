@@ -37,7 +37,13 @@ def init():
             CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
             """
         )
-        # a restart kills any running job: put it back in the queue
+        cols = [r["name"] for r in c.execute("PRAGMA table_info(jobs)")]
+        if "attempts" not in cols:
+            c.execute("ALTER TABLE jobs ADD COLUMN attempts INTEGER DEFAULT 0")
+        # a restart killed any running job: retry once, then stop (avoids an endless crash loop)
+        c.execute("UPDATE jobs SET status='error', stage='Қате', progress=0, "
+                  "error='Сервер жұмыс кезінде екі рет қайта қосылды (жад жетпеген болуы мүмкін). Қайта жасау батырмасын басыңыз.' "
+                  "WHERE status='running' AND COALESCE(attempts,0)>=2")
         c.execute("UPDATE jobs SET status='queued', stage='Қайта басталады', progress=0 WHERE status='running'")
 
 

@@ -93,7 +93,7 @@ def guard():
 def login():
     err = ""
     if request.method == "POST":
-        if config.APP_PASSWORD and hmac.compare_digest(request.form.get("password", ""), config.APP_PASSWORD):
+        if config.APP_PASSWORD and hmac.compare_digest(request.form.get("password", "").encode(), config.APP_PASSWORD.encode()):
             session["ok"] = True
             return redirect("/")
         err = "Құпиясөз қате"
@@ -193,7 +193,7 @@ def job_retry(jid):
     j = db.get_job(jid) or abort(404)
     if j["status"] == "running":
         return jsonify(error="Жұмыс істеп тұр"), 409
-    db.update_job(jid, status="queued", error=None, progress=0, stage="Кезекте")
+    db.update_job(jid, status="queued", error=None, progress=0, stage="Кезекте", attempts=0)
     return jsonify(ok=True)
 
 

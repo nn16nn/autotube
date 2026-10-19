@@ -80,10 +80,10 @@ def run_job(job_id):
     job = db.get_job(job_id)
     if not job:
         return
-    db.update_job(job_id, status="running", error=None, progress=1, stage="Басталды")
+    db.update_job(job_id, status="running", error=None, progress=1, stage="Басталды", attempts=(job.get("attempts") or 0) + 1)
     try:
         build_video(job)
-        db.update_job(job_id, status="ready", stage="Дайын", progress=100)
+        db.update_job(job_id, status="ready", stage="Дайын", progress=100, attempts=0)
         if job["auto_upload"]:
             try:
                 upload_job(job_id)
