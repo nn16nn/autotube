@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NUR AutoTube</title>
+<style>
+  :root { --bg:#0b0d12; --card:#141822; --line:#252b3a; --txt:#e8ecf4; --mut:#8a93a8; --acc:#4f8cff; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--txt);
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  form { width:min(360px, 90vw); background:var(--card); border:1px solid var(--line); border-radius:16px; padding:28px; }
+  h1 { margin:0 0 4px; font-size:22px; } h1 b { color:var(--acc); }
+  p { margin:0 0 18px; color:var(--mut); font-size:14px; }
+  input, button { width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--line);
+                  background:#0f131b; color:var(--txt); font-size:16px; }
+  button { margin-top:12px; background:var(--acc); border:0; font-weight:600; cursor:pointer; }
+  .err { color:#ff6b6b; font-size:14px; margin-top:10px; }
+</style>
+</head>
+<body>
+<form method="post">
+  <h1><b>NUR</b> AutoTube</h1>
+  <p>Кіру үшін құпиясөзді енгізіңіз</p>
+  <input type="password" name="password" placeholder="Құпиясөз" autofocus required>
+  <button type="submit">Кіру</button>
+  {% if err %}<div class="err">{{ err }}</div>{% endif %}
+</form>
+</body>
+</html>

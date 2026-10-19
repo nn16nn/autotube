@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NUR AutoTube</title>
+<style>
+  :root { --bg:#0b0d12; --card:#141822; --card2:#10141c; --line:#252b3a; --txt:#e8ecf4; --mut:#8a93a8;
+          --acc:#4f8cff; --ok:#38d39f; --warn:#ffb84d; --err:#ff6b6b; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width:1080px; margin:0 auto; padding:20px 16px 60px; }
+  header { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+  h1 { margin:0; font-size:24px; } h1 b { color:var(--acc); }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .chip { font-size:13px; padding:6px 10px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--mut); }
+  .chip.on { color:var(--ok); border-color:#1f6b55; }
+  .chip.off { color:var(--warn); border-color:#6b5320; }
+  a.chip { text-decoration:none; cursor:pointer; }
+  .grid { display:grid; grid-template-columns: 380px 1fr; gap:16px; align-items:start; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; }
+  .card h2 { margin:0 0 14px; font-size:16px; }
+  label { display:block; font-size:13px; color:var(--mut); margin:12px 0 5px; }
+  input, select, textarea { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line);
+      background:var(--card2); color:var(--txt); font-size:15px; font-family:inherit; }
+  textarea { resize:vertical; min-height:92px; }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .check { display:flex; gap:10px; align-items:center; margin-top:14px; font-size:14px; color:var(--txt); }
+  .check input { width:auto; }
+  button { font-family:inherit; cursor:pointer; }
+  .btn { width:100%; margin-top:16px; padding:13px; border:0; border-radius:12px; background:var(--acc); color:#fff; font-size:16px; font-weight:600; }
+  .btn:disabled { opacity:.5; }
+  .small { font-size:12px; color:var(--mut); margin-top:6px; line-height:1.4; }
+  .job { border:1px solid var(--line); background:var(--card2); border-radius:14px; padding:14px; margin-bottom:12px; }
+  .job-top { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
+  .job-title { font-weight:600; font-size:15px; overflow-wrap:anywhere; }
+  .job-sub { font-size:12.5px; color:var(--mut); margin-top:3px; }
+  .badge { font-size:12px; padding:4px 9px; border-radius:999px; white-space:nowrap; border:1px solid var(--line); }
+  .b-queued { color:var(--mut); } .b-running { color:var(--acc); border-color:#2b4a85; }
+  .b-ready { color:var(--ok); border-color:#1f6b55; } .b-uploaded { color:#fff; background:#c4302b; border-color:#c4302b; }
+  .b-error { color:var(--err); border-color:#7a2f2f; }
+  .bar { height:6px; background:#0b0e14; border-radius:6px; margin-top:12px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:var(--acc); transition:width .4s; }
+  .err { color:var(--err); font-size:13px; margin-top:8px; overflow-wrap:anywhere; }
+  .acts { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .acts button, .acts a { padding:8px 12px; border-radius:9px; border:1px solid var(--line); background:var(--card);
+      color:var(--txt); font-size:13px; text-decoration:none; }
+  .acts .pri { background:var(--acc); border-color:var(--acc); }
+  .acts .del { color:var(--err); }
+  video { width:100%; max-height:420px; margin-top:12px; border-radius:10px; background:#000; }
+  .empty { color:var(--mut); text-align:center; padding:40px 10px; }
+  details summary { cursor:pointer; color:var(--mut); font-size:13px; margin-top:10px; }
+  code { background:#0b0e14; padding:2px 6px; border-radius:6px; font-size:12px; overflow-wrap:anywhere; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><b>NUR</b> AutoTube</h1>
+    <div class="chips" id="chips"></div>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Жаңа видео</h2>
+      <label>Тақырыптар (әр жолға біреу)</label>
+      <textarea id="topics" placeholder="Мысалы:&#10;Ғарыштағы ең үлкен жұлдыз&#10;Мұхит түбіндегі құпиялар"></textarea>
+
+      <label>Өз сценарийім бар (бір тақырып болса ғана, міндетті емес)</label>
+      <textarea id="script" placeholder="Бос қалдырсаңыз, AI өзі жазады"></textarea>
+
+      <div class="row">
+        <div><label>Түрі</label>
+          <select id="kind">
+            <option value="short">Shorts (тік)</option>
+            <option value="long">Ұзын (5 мин)</option>
+            <option value="both">Екеуі де</option>
+          </select></div>
+        <div><label>Тіл</label>
+          <select id="lang">
+            <option value="kk">Қазақша</option>
+            <option value="ru">Русский</option>
+            <option value="en">English</option>
+          </select></div>
+      </div>
+      <div class="row">
+        <div><label>Дауыс</label><select id="voice"></select></div>
+        <div><label>Суреттер стилі</label>
+          <select id="style">
+            {% for s in styles %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+          </select></div>
+      </div>
+
+      <label class="check"><input type="checkbox" id="auto" checked> Дайын болған соң YouTube-қа автоматты жүктеу</label>
+      <div class="row">
+        <div><label>Жариялау уақыты (бастамасы)</label><input type="datetime-local" id="start"></div>
+        <div><label>Аралығы (сағат)</label><input type="number" id="gap" value="24" min="1"></div>
+      </div>
+      <div class="small">Уақыт көрсетсеңіз, видеолар YouTube кестесімен сол уақытта өзі шығады. Бос болса, төмендегі құпиялылық бойынша бірден жүктеледі.</div>
+      <label>Құпиялылық (уақыт көрсетілмесе)</label>
+      <select id="privacy">
+        <option value="private">Жабық (private)</option>
+        <option value="unlisted">Сілтеме бойынша</option>
+        <option value="public">Ашық (public)</option>
+      </select>
+      <button class="btn" id="go">Кезекке қосу</button>
+      <div class="small" id="msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Кезек</h2>
+      <div id="jobs"><div class="empty">Әзірге видео жоқ</div></div>
+      <details>
+        <summary>YouTube баптау нұсқауы</summary>
+        <div class="small" style="line-height:1.7">
+          1. Google Cloud → YouTube Data API v3 қосыңыз, OAuth Client (Web) жасаңыз.<br>
+          2. Redirect URI: <code id="ruri"></code><br>
+          3. Render-де GOOGLE_CLIENT_ID және GOOGLE_CLIENT_SECRET қойыңыз.<br>
+          4. Жоғарыдағы «YouTube қосу» батырмасын басыңыз.
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
+
+<script>
+const VOICES = {{ voices|tojson }};
+const $ = id => document.getElementById(id);
+const STATUS = {queued:'Кезекте', running:'Жұмыс істеуде', ready:'Дайын', uploaded:'YouTube-та', error:'Қате'};
+
+function fillVoices() {
+  $('voice').innerHTML = VOICES[$('lang').value].map(v => `<option value="${v[0]}">${v[1]}</option>`).join('');
+}
+$('lang').onchange = fillVoices; fillVoices();
+
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function api(url, opts) {
+  const r = await fetch(url, opts);
+  if (r.status === 401) { location.href = '/login'; return null; }
+  return r;
+}
+
+async function loadStatus() {
+  const r = await api('/api/status'); if (!r) return;
+  const s = await r.json();
+  $('ruri').textContent = s.redirect_uri;
+  let h = `<span class="chip">AI: ${esc(s.llm)}</span>`;
+  if (s.demo) h += `<span class="chip off">DEMO режимі</span>`;
+  if (s.youtube) h += `<span class="chip on">YouTube қосылған</span><a class="chip" onclick="ytOff()">Ажырату</a>`;
+  else if (s.youtube_configured) h += `<a class="chip off" href="/youtube/connect">YouTube қосу</a>`;
+  else h += `<span class="chip off">YouTube: GOOGLE_CLIENT_ID жоқ</span>`;
+  h += `<a class="chip" href="/logout">Шығу</a>`;
+  $('chips').innerHTML = h;
+}
+async function ytOff() { await api('/youtube/disconnect', {method:'POST'}); loadStatus(); }
+
+let lastHtml = '';
+async function loadJobs() {
+  const r = await api('/api/jobs'); if (!r) return;
+  const jobs = await r.json();
+  if (!jobs.length) { $('jobs').innerHTML = '<div class="empty">Әзірге видео жоқ</div>'; return; }
+  const open = new Set([...document.querySelectorAll('video')].map(v => v.dataset.id));
+  const html = jobs.map(j => {
+    const pub = j.publish_at ? ' · жариялау: ' + new Date(j.publish_at).toLocaleString('kk-KZ') : '';
+    const vid = j.has_video && open.has(String(j.id))
+      ? `<video data-id="${j.id}" src="/media/${j.id}/video" controls playsinline></video>` : '';
+    return `<div class="job">
+      <div class="job-top">
+        <div><div class="job-title">${esc(j.title || j.topic)}</div>
+        <div class="job-sub">${j.kind === 'short' ? 'Shorts' : 'Ұзын'} · ${esc(j.topic)}${pub}</div></div>
+        <span class="badge b-${j.status}">${STATUS[j.status] || j.status}</span>
+      </div>
+      ${j.status === 'running' || j.status === 'queued' ? `<div class="job-sub" style="margin-top:10px">${esc(j.stage)}</div>
+        <div class="bar"><i style="width:${j.progress}%"></i></div>` : ''}
+      ${j.error ? `<div class="err">${esc(j.error)}</div>` : ''}
+      ${vid}
+      <div class="acts">
+        ${j.has_video ? `<button onclick="showVid(${j.id})">▶ Қарау</button>
+          <a href="/media/${j.id}/video?dl=1">⬇ Жүктеп алу</a>` : ''}
+        ${j.has_video && !j.youtube_id && j.status !== 'running' ? `<button class="pri" onclick="act(${j.id},'upload')">YouTube-қа жүктеу</button>` : ''}
+        ${j.youtube_id ? `<a class="pri" target="_blank" href="https://studio.youtube.com/video/${esc(j.youtube_id)}/edit">YouTube Studio</a>` : ''}
+        ${j.status === 'error' || j.status === 'ready' ? `<button onclick="act(${j.id},'retry')">↻ Қайта жасау</button>` : ''}
+        ${j.status !== 'running' ? `<button class="del" onclick="del(${j.id})">Жою</button>` : ''}
+      </div></div>`;
+  }).join('');
+  if (html !== lastHtml) { $('jobs').innerHTML = html; lastHtml = html; }
+}
+function showVid(id) {
+  const old = document.querySelector(`video[data-id="${id}"]`);
+  if (old) { old.remove(); return; }
+  const idx = [...document.querySelectorAll('.job')].findIndex(el => el.innerHTML.includes(`showVid(${id})`));
+  const el = document.querySelectorAll('.job')[idx];
+  const v = document.createElement('video');
+  v.dataset.id = id; v.src = `/media/${id}/video`; v.controls = true; v.playsInline = true;
+  el.querySelector('.acts').before(v); v.play().catch(()=>{});
+}
+async function act(id, what) { await api(`/api/jobs/${id}/${what}`, {method:'POST'}); lastHtml=''; loadJobs(); }
+async function del(id) { if (!confirm('Жою керек пе?')) return; await api(`/api/jobs/${id}`, {method:'DELETE'}); lastHtml=''; loadJobs(); }
+
+$('go').onclick = async () => {
+  const topics = $('topics').value.trim();
+  if (!topics) { $('msg').textContent = 'Тақырып жазыңыз'; return; }
+  $('go').disabled = true;
+  const start = $('start').value ? new Date($('start').value).toISOString() : null;
+  const r = await api('/api/jobs', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+    topics, script: $('script').value, kind: $('kind').value, lang: $('lang').value, voice: $('voice').value,
+    style: $('style').value, auto_upload: $('auto').checked, privacy: $('privacy').value,
+    start_at: start, interval_hours: $('gap').value })});
+  $('go').disabled = false;
+  if (!r) return;
+  const d = await r.json();
+  if (r.ok) { $('msg').textContent = `${d.ids.length} видео кезекке қосылды`; $('topics').value=''; $('script').value=''; lastHtml=''; loadJobs(); }
+  else $('msg').textContent = d.error || 'Қате';
+};
+
+loadStatus(); loadJobs();
+setInterval(loadJobs, 4000);
+</script>
+</body>
+</html>
