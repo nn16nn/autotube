@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: nur-autotube
+    name: autotube
     runtime: python
     plan: starter            # free жоспар 15 мин бос тұрса ұйықтайды: кезек үзіледі
     buildCommand: pip install -r requirements.txt
@@ -14,7 +14,7 @@ services:
       - key: APP_PASSWORD
         sync: false
       - key: PUBLIC_URL
-        sync: false          # мысалы https://nur-autotube.onrender.com
+        sync: false          # мысалы https://autotube.onrender.com
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
